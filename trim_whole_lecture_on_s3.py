@@ -77,7 +77,7 @@ else:
 
 if len(fielddat['transcript']) > 4:
     aws_s3_download(s3urlbase+fielddat['transcript'], tmpdir)
-    assert 0 == subprocess_call(['python',os.path.join(thispath,'trim_transcript.py'),tmpdir+fielddat['transcript'], '-ss',str(args.trimstart),'-te',str(args.trimend)])
+    assert 0 == subprocess_call(['python3',os.path.join(thispath,'trim_transcript.py'),tmpdir+fielddat['transcript'], '-ss',str(args.trimstart),'-te',str(args.trimend)])
     trimout_transc = tmpdir+fielddat['transcript'][:-len('.json')]   +'_trimmed.json'
     assert os.path.isfile(trimout_transc), trimout_transc
     getorpostcontent('transcript',    fielddat['transcript'][:-len('.json')]   +'_trimmed.json')
@@ -87,7 +87,7 @@ else:
 
 if len(fielddat['tracking_data']) > 4:
     aws_s3_download(s3urlbase+fielddat['tracking_data'], tmpdir)
-    subprocess_check_output(['python',os.path.join(thispath,'trim_tracking_json.py'), tmpdir+fielddat['tracking_data'],'-ss',str(args.trimstart),'-te',str(args.trimend)])
+    subprocess_check_output(['python3',os.path.join(thispath,'trim_tracking_json.py'), tmpdir+fielddat['tracking_data'],'-ss',str(args.trimstart),'-te',str(args.trimend)])
     trimout_tracki = tmpdir+fielddat['tracking_data'][:-len('.json')]+'_trimmed.json'
     assert os.path.isfile(trimout_tracki), trimout_tracki
     getorpostcontent('tracking_data', fielddat['tracking_data'][:-len('.json')]+'_trimmed.json')
