@@ -10,8 +10,9 @@ import boto3
 sys.path.append(os.path.join(thispath,'..'))
 from myutils import subprocess_check_output, fstr
 
+should_post = os.environ.get('SHOULD_POST', '')
+should_post = True if len(should_post) > 3 else False
 # TODO: use boto, check if file exists, check hash/etag if it does (so don't re-download)
-
 aws_s3_prefix = 's3://'
 
 def aws_s3_download(s3path: str, localpath: str, skip_if_exist_and_skip_hash_check:bool=False, sync:bool=False):
@@ -27,7 +28,8 @@ def aws_s3_download(s3path: str, localpath: str, skip_if_exist_and_skip_hash_che
     subprocess_check_output(call_cmd, assert_hard=True)
 
 def aws_s3_upload(localpath: str, s3path: str, sync:bool=False, delete_after_up:bool=False):
-    return
+    if should_post is False:
+        return
     assert s3path.startswith(aws_s3_prefix), s3path
     assert not localpath.startswith(aws_s3_prefix), localpath
     if sync:

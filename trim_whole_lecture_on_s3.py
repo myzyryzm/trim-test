@@ -62,7 +62,6 @@ tmpdir += '/'
 getorpostcontent, s3urlbase = build_getter_poster_for_univ2lect(args.bucket, '/'.join(univ2lect))
 
 fielddat = {ff:getorpostcontent(ff) for ff in ('time_block', 'transcript', 'tracking_data', 'video', 'enhanced_video', 'powerpointjson')}
-vids2trim = []
 
 if len(fielddat['powerpointjson']) > 4:
     ppj = fielddat['powerpointjson'].replace('\\\"','\"')
@@ -70,6 +69,8 @@ if len(fielddat['powerpointjson']) > 4:
     newppj, vids2trim = trim_powerpoint_slides_of_lecture(thejson=ppj, newstart=args.trimstart, newend=args.trimend)
     print('newppj', newppj)
     getorpostcontent('powerpointjson', newppj)
+else:
+    vids2trim = []
 
 if len(fielddat['transcript']) > 4:
     aws_s3_download(s3urlbase+fielddat['transcript'], tmpdir)
@@ -128,9 +129,6 @@ for videototrim in vids2trim:
     assert videototrim["oldfile"][-4] == '.', str(videototrim["oldfile"])
     oldvideoname=videototrim["oldfile"]
     newvideoname=videototrim["newfile"]
-    print('$$$$$$$$$$$$$$$$$$$$$$')
-    print(videototrim)
-    print('$$$$$$$$$$$$$$$$$$$$$$')
     oldloc = videototrim["oldloc"]
     
     aws_s3_download(f'{s3urlbase}{oldvideoname}', tmpdir)
