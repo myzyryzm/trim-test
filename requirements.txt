@@ -1,0 +1,8 @@
+setuptools
+wheel
+numpy
+scipy
+jsonschema
+pypng
+requests
+boto3
