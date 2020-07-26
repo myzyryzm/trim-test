@@ -5,7 +5,7 @@ identity_basic_ = {}
 identity_basic_['django_url'] = os.environ.get('DJANGO_URL', '')
 identity_basic_['django_user'] = os.environ.get('DJANGO_USER', '')
 identity_basic_['django_pass'] = os.environ.get('DJANGO_PASS', '')
-print('identity_basic', identity_basic)
+
 # this script won't do any asserts, so won't crash
 # it's a subset of "configpaths.py"
 
