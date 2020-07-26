@@ -11,11 +11,7 @@ from django_lecture_field_get_or_post import build_getter_poster_for_univ2lect
 from download_and_trim_contours import download_and_trim_contours
 from trim_powerpoint_slides_of_lecture import trim_powerpoint_slides_of_lecture
 
-should_post = os.environ.get('SHOULD_POST', '')
-should_post = True if len(should_post) > 3 else False
 def upload_to_s3(localpath: str, s3path: str):
-    if should_post is False:
-        return
     call_cmd = ['aws','s3','cp','--only-show-errors'] + [localpath, s3path]
     subprocess_check_output(call_cmd, assert_hard=True)
 

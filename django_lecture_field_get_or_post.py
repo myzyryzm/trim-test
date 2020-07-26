@@ -8,9 +8,6 @@ from requests.auth import HTTPBasicAuth
 sys.path.append(os.path.join(thispath,'..'))
 from requests_utils import my_raise_for_status
 
-should_post = os.environ.get('SHOULD_POST', '')
-should_post = True if len(should_post) > 3 else False
-
 def build_getter_poster_for_univ2lect(bucket:str, univ2lect:str, django_cred_dict:dict={}):
     assert univ2lect.count('/') == 3, str(univ2lect)
     univ2lect = univ2lect.split('/')
@@ -32,7 +29,7 @@ def build_getter_poster_for_univ2lect(bucket:str, univ2lect:str, django_cred_dic
 
     def getorpostcontent(field, postcontent=None):
         ddic = {"fieldName": field}
-        if postcontent is not None and should_post is True:
+        if postcontent is not None:
             ddic["newValue"] = postcontent
             if isinstance(postcontent,dict):
                 rr = requests.post(ppjPostURL, auth=basicauth, json=ddic)
