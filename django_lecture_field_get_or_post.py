@@ -33,7 +33,6 @@ def build_getter_poster_for_univ2lect(bucket:str, univ2lect:str, django_cred_dic
     def getorpostcontent(field, postcontent=None):
         ddic = {"fieldName": field}
         if postcontent is not None and should_post is True:
-            return
             ddic["newValue"] = postcontent
             if isinstance(postcontent,dict):
                 rr = requests.post(ppjPostURL, auth=basicauth, json=ddic)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os,sys,time
 thispath = os.path.dirname(os.path.abspath(__file__))
 import argparse
@@ -11,6 +10,14 @@ from redisq_tasks import aws_s3_download, aws_s3_upload
 from django_lecture_field_get_or_post import build_getter_poster_for_univ2lect
 from download_and_trim_contours import download_and_trim_contours
 from trim_powerpoint_slides_of_lecture import trim_powerpoint_slides_of_lecture
+
+should_post = os.environ.get('SHOULD_POST', '')
+should_post = True if len(should_post) > 3 else False
+def upload_to_s3(localpath: str, s3path: str):
+    if should_post is False:
+        return
+    call_cmd = ['aws','s3','cp','--only-show-errors'] + [localpath, s3path]
+    subprocess_check_output(call_cmd, assert_hard=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('bucket',    type=str)
@@ -107,14 +114,19 @@ s3noprefix = s3urlbase[ len('s3://'):]
 
 for videofield in ('video', 'enhanced_video'):
     if videofield in fielddat and len(fielddat[videofield]) > 1:
-        oldloc = fielddat[videofield].split('/')[-1]
+        videosplit = fielddat[videofield].split('/')
+        oldloc = videosplit[-1]
         newvideoname = oldloc[:-4]+'_trimmed'+oldloc[-4:]
+        prefolder = ''
+        if len(videosplit) > 1:
+            prefolder = videosplit[-2] + '/'
         
         vids2trim.append(
             {
                 "oldfile":fielddat[videofield], 
                 "newfile":newvideoname, 
                 "oldloc": oldloc, 
+                "prefolder": prefolder,
                 "-ss":args.trimstart,
                 "-to":args.trimend, 
                 "videofield":videofield
@@ -140,8 +152,9 @@ for videototrim in vids2trim:
                                     '-vcodec','copy', '-acodec','copy', file_out]
     
     subprocess_check_output(ffmpeg)
-    
-    aws_s3_upload(file_out, s3urlbase)
+    prefolder = videototrim["prefolder"]
+    s3_url = f'{s3urlbase}{prefolder}'
+    upload_to_s3(file_out, s3_url)
     
     if "videofield" in videototrim:
         getorpostcontent(videototrim['videofield'], newvideoname)
