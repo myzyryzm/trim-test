@@ -92,20 +92,3 @@ def trim_powerpoint_slides_of_lecture(thejson:dict, newstart:float, newend:float
 
     print("\n")
     return thejson, vids2trim
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('json',     type=str)
-    parser.add_argument('newstart', type=float)
-    parser.add_argument('newend',   type=float)
-    args = parser.parse_args()
-    assert os.path.isfile(args.json), args.json
-    with open(args.json,'r') as infile:
-        jdat = json.load(infile)
-    jtrim, vids2trim = trim_powerpoint_slides_of_lecture(jdat, args.newstart, args.newend)
-    with open(args.json[:args.json.rfind('.')]+'_trimmed.json', 'w') as outfile:
-        json.dump(jtrim, outfile)
-    print("you should trim these videos:")
-    for v2tr in vids2trim:
-        print(str(v2tr))

@@ -128,19 +128,3 @@ def download_and_trim_contours(s3blocksdir:str, trimstart:float=-1., trimend:flo
     assert 0 == subprocess_call(['aws','s3','sync', localoutdir, s3outdir])
 
     return outdir
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('s3blocksdir',  type=str, help='e.g. s3://evt-lect-test/ucsd/winter2018/math20b/lecture1/timeblocks1')
-    parser.add_argument('-sd', '--syncdir',      type=str, default='')
-    parser.add_argument('-o', '--outdir',  type=str, default='')
-
-    parser.add_argument('-ss', '--trimstart',    type=float, required=True)
-    parser.add_argument('-te', '--trimend',      type=float, default=-1.)
-    parser.add_argument('-td', '--trimduration', type=float, default=-1.)
-
-    parser.add_argument('--refilter', action='store_true')
-    parser.add_argument('--pickle_params', type=str, default='', help='pickle filter')
-
-    download_and_trim_contours(**vars(parser.parse_args()))

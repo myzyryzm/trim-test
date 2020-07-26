@@ -52,11 +52,3 @@ def download_and_check_meta(bucket:str, univ2lect:str):
     assert 0 == subprocess_call(['aws','s3','cp', s3urlbase+notesmeta, tmplocation])
     replace_folder_in_metafile(tmplocation, tmplocation, None, notesmeta.split('/')[0])
     assert 0 == subprocess_call(['aws','s3','cp', tmplocation, s3urlbase+notesmeta])
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('bucket',    type=str, help='AWS S3 bucket; e.g. evt-lect-test')
-    parser.add_argument('univ2lect', type=str, help='e.g. ucsd/winter2018/math20b/lecture1')
-    args = parser.parse_args()
-    download_and_check_meta(args.bucket, args.univ2lect)
