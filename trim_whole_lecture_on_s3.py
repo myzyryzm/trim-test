@@ -128,6 +128,9 @@ for videototrim in vids2trim:
     assert videototrim["oldfile"][-4] == '.', str(videototrim["oldfile"])
     oldvideoname=videototrim["oldfile"]
     newvideoname=videototrim["newfile"]
+    print('$$$$$$$$$$$$$$$$$$$$$$')
+    print(videototrim)
+    print('$$$$$$$$$$$$$$$$$$$$$$')
     oldloc = videototrim["oldloc"]
     
     aws_s3_download(f'{s3urlbase}{oldvideoname}', tmpdir)
