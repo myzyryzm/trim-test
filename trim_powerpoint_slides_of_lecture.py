@@ -61,8 +61,9 @@ def trim_powerpoint_slides_of_lecture(thejson:dict, newstart:float, newend:float
                 newById[slid]['end']   =            slide_new_end   - new_start_offset
                 for key,val in newById[slid].items():
                     if 'embed' in key.lower() and isinstance(val,str) and len(val) > 4 and val.endswith('.mp4'):
-                        newfname = val[:val.rfind('.')]+'_trimmed.mp4'
-                        appendme = {"oldfile":val, "newfile":newfname, "-ss":max(0., newstart - slstart), "-to":min(newend - slstart, slend - slstart)}
+                        oldloc = val.split('/')[-1]
+                        newfname = oldloc[:oldloc.rfind('.')]+'_trimmed.mp4'
+                        appendme = {"oldfile":val, "newfile":newfname, "oldloc": oldloc, "-ss":max(0., newstart - slstart), "-to":min(newend - slstart, slend - slstart)}
                         if val not in vidkeysbeingtrimmed:
                             vidkeysbeingtrimmed[val] = appendme
                             vids2trim.append(appendme)
