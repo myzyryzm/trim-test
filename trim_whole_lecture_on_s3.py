@@ -106,8 +106,19 @@ s3noprefix = s3urlbase[ len('s3://'):]
 
 for videofield in ('video', 'enhanced_video'):
     if videofield in fielddat and len(fielddat[videofield]) > 1:
-        newvideoname = fielddat[videofield][:-4]+'_trimmed'+fielddat[videofield][-4:]
-        vids2trim.append({"oldfile":fielddat[videofield], "newfile":newvideoname, "-ss":args.trimstart, "-to":args.trimend, "videofield":videofield})
+        oldloc = fielddat[videofield].split('/')[-1]
+        newvideoname = oldloc[:-4]+'_trimmed'+oldloc[-4:]
+        
+        vids2trim.append(
+            {
+                "oldfile":fielddat[videofield], 
+                "newfile":newvideoname, 
+                "oldloc": oldloc, 
+                "-ss":args.trimstart,
+                "-to":args.trimend, 
+                "videofield":videofield
+            }
+        )
         # fielddat[videofield]=video_ece_265a_a00_jan_13_le_hybrid_tcns.mp4
     else:
         print("no "+str(videofield)+" to trim for this lecture")
@@ -115,12 +126,12 @@ for videofield in ('video', 'enhanced_video'):
 for videototrim in vids2trim:
     print("trimming video \'"+str(videototrim["oldfile"])+"\'")
     assert videototrim["oldfile"][-4] == '.', str(videototrim["oldfile"])
-    
     oldvideoname=videototrim["oldfile"]
     newvideoname=videototrim["newfile"]
+    oldloc = videototrim["oldloc"]
     
     aws_s3_download(f'{s3urlbase}{oldvideoname}', tmpdir)
-    file_in = f'{tmpdir}{oldvideoname}'
+    file_in = f'{tmpdir}{oldloc}'
     file_out = f'{tmpdir}{newvideoname}'
     time_start = videototrim["-ss"]
     time_durat = videototrim["-to"] - time_start
