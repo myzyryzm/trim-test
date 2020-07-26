@@ -16,42 +16,6 @@ def f64fix(arr):
         return np.float32(arr)
     return arr
 
-def uint8clip(arr, assert_range=False):
-    if arr.dtype == np.uint8:
-        return arr
-    assert arr.dtype in [np.float32, np.float64], str(arr.dtype)
-    if assert_range:
-        assert np.amin(arr) > -0.000001 and np.amax(arr) < 255.001, \
-            str(np.amin(arr))+', '+str(np.amax(arr))
-    return np.uint8(np.round(np.clip(arr,a_min=0.,a_max=255.)))
-
-def uint8norm(arr):
-    if arr.dtype == np.uint8:
-        return arr
-    assert arr.dtype in [np.float32, np.float64], str(arr.dtype)
-    amin = np.amin(arr)
-    return uint8clip(255.*(arr-amin)/(np.amax(arr)-amin))
-
-def np_concat_oddshapes_centered(arrs, axis):
-    assert isinstance(axis,int) and axis in (0,1), str(axis)
-    assert isinstance(arrs,list) or isinstance(arrs,tuple), str(type(arrs))
-    for arr in arrs:
-        assert len(arr.shape) == 2, str(arr.shape)
-    maxshap = max([arr.shape[1-axis] for arr in arrs])
-    newarrs = []
-    for arr in arrs:
-        padamt = int(maxshap - arr.shape[1-axis])
-        if padamt > 0:
-            if axis == 0:
-                paddim = ((0,0),(padamt-padamt//2,padamt//2))
-            else:
-                paddim = ((padamt-padamt//2,padamt//2),(0,0))
-            newarrs.append(np.pad(arr, paddim, mode='constant'))
-        else:
-            newarrs.append(arr)
-    return np.concatenate(newarrs, axis=axis)
-
-
 def describe(name,arr,extranewline=None):
     prstr = str(name)
     try:
