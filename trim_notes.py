@@ -4,18 +4,48 @@ thispath = os.path.dirname(os.path.abspath(__file__))
 import argparse
 from copy import copy
 import json, jsonschema
+import re
 import numpy as np
 import png # pip install pypng
 sys.path.append(os.path.join(thispath,'..'))
-from myutils import subprocess_check_output, subprocess_call
-from read_timestamps_image import read_timestamps_image
-from misc_audio_utils import describe
-from ensure_notes_jsons_refer_to_their_own_folder import replace_folder_in_metafile
+from utils import subprocess_check_output, subprocess_call, describe, s3_download_folder, s3_upload_folder
 
-def download_and_trim_contours(s3blocksdir:str, trimstart:float=-1., trimend:float=-1., trimduration:float=-1., \
-                                syncdir:str='', outdir:str='', refilter:bool=False, pickle_params:str=''):
-    while s3blocksdir.endswith('/'):
-        s3blocksdir = s3blocksdir[:-1]
+def read_timestamps_image(tspath_, compareshape=None):
+    assert os.path.isfile(tspath_), tspath_
+    # read timestamps
+    with open(tspath_,'rb') as tsopenedfile:
+        reader = png.Reader(file=tsopenedfile)
+        readdata = reader.read()
+        tsimg = np.vstack([np.uint16(row) for row in readdata[2]])
+        assert tsimg.shape[1] == readdata[0], str(tsimg.shape)+', '+str(readdata[:2])
+        assert tsimg.shape[0] == readdata[1], str(tsimg.shape)+', '+str(readdata[:2])
+        if compareshape is not None:
+            assert list(tsimg.shape[:2]) == list(compareshape[:2]), str(tsimg.shape)+', '+str(compareshape)
+    assert isinstance(tsimg, np.ndarray), str(type(tsimg))
+    assert len(tsimg.shape) == 2 and tsimg.size > 1, str(tsimg.shape)
+    return tsimg
+
+def replace_folder_in_metafile(infile, outfile, oldstr, newstr):
+    with open(infile,'r') as readme:
+        indat = json.load(readme)
+    assert isinstance(indat,dict), str(type(indat))+' '+str(infile)
+    newd = {"meta":indat["meta"], "data":[]}
+    assert isinstance(indat['data'],list), str(type(indat['data']))+'\n\n'+str(indat)+'\n'
+    for key in indat['data']:
+        assert isinstance(key,dict), str(type(key))
+        if oldstr is not None and len(oldstr) > 0:
+            assert      key["image"].startswith(oldstr) and      key["image"].count('/') == 1, str(key["image"])     +', '+str(oldstr)
+            assert key["timestamps"].startswith(oldstr) and key["timestamps"].count('/') == 1, str(key["timestamps"])+', '+str(oldstr)
+        key["image"]      = '/'.join((newstr,      key["image"].split('/')[-1]))
+        key["timestamps"] = '/'.join((newstr, key["timestamps"].split('/')[-1]))
+        newd["data"].append(copy(key))
+    with open(outfile,'w') as outfile:
+        json.dump(newd, outfile)
+
+def download_and_trim_contours(bucket:str, key: str, localpath: str, trimstart:float=-1., trimend:float=-1., trimduration:float=-1., \
+                                outdir:str='', refilter:bool=False, pickle_params:str=''):
+   
+    s3_download_folder(bucket, key, localpath)
 
     if trimend < 0. and trimduration < 0.:
         trimend      = int(1e9)
@@ -28,25 +58,16 @@ def download_and_trim_contours(s3blocksdir:str, trimstart:float=-1., trimend:flo
             trimduration = trimend - trimstart
             assert trimduration > 0., str(trimend)+', '+str(trimstart)
 
-    assert s3blocksdir.startswith('s3://') and s3blocksdir.count('/') > 3, str(s3blocksdir)
-
     tsfileend = '_timestamps.png'
 
     #----------------------
-    if len(syncdir) >= 1:
-        tmpdir = syncdir
-    else:
-        tmpdir_base = '/tmp/aws_s3_tmp_'
-        tmpdir_intg = 0
-        while os.path.isdir(tmpdir_base+str(tmpdir_intg)):
-            tmpdir_intg += 1
-        tmpdir = tmpdir_base+str(tmpdir_intg)
+    tmpdir = localpath
     while tmpdir.endswith('/'):
         tmpdir = tmpdir[:-1]
     subprocess_call(['mkdir','-p', tmpdir])
 
     #----------------------
-    basecf = s3blocksdir.split('/')[-1]
+    basecf = localpath.split('/')[-1]
     backupbaseblockfold = copy(basecf)
     if len(outdir) < 1:
         ival = None
@@ -67,24 +88,22 @@ def download_and_trim_contours(s3blocksdir:str, trimstart:float=-1., trimend:flo
     assert '/' not in outdir, str(outdir)
 
     print("outdir: "+str(outdir))
-
+    
     localoutdir = os.path.join(os.path.dirname(tmpdir), outdir)
-    s3outdir = '/'.join(s3blocksdir.split('/')[:-1]+[outdir,])
-
     subprocess_call(['mkdir','-p', localoutdir])
-
+    
+    univ2lect = '/'.join(key.split('/')[:-2])
+    full_key = f'{univ2lect}/{outdir}'
+    
     print("localoutdir: "+str(localoutdir))
-    print("s3 out dir: "+str(s3outdir))
-
-    #----------------------
-
-    assert 0 == subprocess_call(['aws','s3','sync', s3blocksdir, tmpdir])
+    print("s3 out key: "+str(full_key))
+    
     pngs = [os.path.join(tmpdir,ff) for ff in os.listdir(tmpdir) if ff.endswith(tsfileend)]
     assert len(pngs) > 0, str(pngs)+'\n'+str(list(os.listdir(tmpdir)))
-
+    
     subtrme = int(round(float(trimstart)))
     maxtime = int(round(float(trimend  )))
-
+    
     syncme = []
 
     for pngf in pngs:
@@ -104,19 +123,23 @@ def download_and_trim_contours(s3blocksdir:str, trimstart:float=-1., trimend:flo
         syncme.append(outfname)
         with open(outfname, 'wb') as openedfile:
             writer.write(openedfile, img)
-
+            
     for fpth in syncme:
         oldimgf = os.path.join(os.path.dirname(fpth), os.path.basename(fpth)[:-len(tsfileend)])
         oldfs = [os.path.join(tmpdir,ff) for ff in os.listdir(tmpdir) if not ff.endswith(tsfileend) and ff.startswith(os.path.basename(oldimgf))]
         assert len(oldfs) == 1, str(oldimgf)+'\n'+str(oldfs)
         oldfs = oldfs[0]
         subprocess_check_output(['cp', oldfs, localoutdir+'/'])
+    
     metafiles = [os.path.join(tmpdir,ff) for ff in os.listdir(tmpdir) if ff.lower().startswith('meta') and ff.lower().endswith('.json')]
+    
     for ff in metafiles:
         print("in meta.json, replacing \'"+str(backupbaseblockfold)+"\' with \'"+str(outdir)+"\'")
         replace_folder_in_metafile(ff, localoutdir+'/'+os.path.basename(ff), backupbaseblockfold, outdir)
-
-    if refilter:
+    
+    # TODO: ADD THIS FUNCTIONALITY BACK
+    test_it = False
+    if refilter and test_it is True:
         filterfile = '/evt/interactive-writing-segmentation/filter_keyframes.py'
         assert os.path.isfile(filterfile), filterfile
         fargs = ['python',filterfile,localoutdir,'--were_transparency_on_s3','--overwrite_in_place']
@@ -125,6 +148,9 @@ def download_and_trim_contours(s3blocksdir:str, trimstart:float=-1., trimend:flo
         assert 0 == subprocess_call(fargs)
 
     print("syncing resulting folder")
-    assert 0 == subprocess_call(['aws','s3','sync', localoutdir, s3outdir])
-
+    
+    while full_key.endswith('/'):
+        full_key = full_key[:-1]
+    
+    s3_upload_folder(bucket, full_key, localoutdir)
     return outdir
